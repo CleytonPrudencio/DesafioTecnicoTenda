@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupon API — Console</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%9F%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            brand: {
+              50:  '#fff5ef',
+              100: '#ffe7d4',
+              200: '#ffcca6',
+              300: '#ffa66c',
+              400: '#ff7d34',
+              500: '#ff5d10',
+              600: '#ed4302',
+              700: '#c43203',
+              800: '#9c290a',
+              900: '#7e240d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 text-slate-800 font-sans">
+
+  <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,93,16,0.15),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.12),transparent_55%)] pointer-events-none"></div>
+
+  <header class="relative">
+    <div class="max-w-6xl mx-auto px-6 pt-10 pb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/30">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 12V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 1 1 0 4v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2a2 2 0 1 1 0-4Z"/>
+            <path d="M9 9v6"/>
+            <path d="M15 9v6"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">Coupon Console</h1>
+          <p class="text-sm text-slate-500">Painel de gerenciamento de cupons — Desafio Técnico Tenda</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="api-status" class="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-white shadow-sm border border-slate-200">
+          <span class="w-2 h-2 rounded-full bg-slate-300 animate-pulse"></span>
+          Verificando API…
+        </span>
+        <a id="swagger-link" href="/swagger-ui/index.html" target="_blank" rel="noopener" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-900 text-white shadow hover:bg-slate-700 transition">Swagger UI ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative max-w-6xl mx-auto px-6 pb-16 grid gap-8 md:grid-cols-5">
+    <section class="md:col-span-2">
+      <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl shadow-slate-300/40 border border-white p-6 sticky top-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-1">Novo cupom</h2>
+        <p class="text-xs text-slate-500 mb-5">Os caracteres especiais do código são removidos antes de salvar.</p>
+
+        <form id="create-form" class="space-y-4" novalidate>
+          <div>
+            <label class="text-sm font-semibold text-slate-700 flex items-center justify-between">
+              <span>Código <span class="text-rose-500">*</span></span>
+              <span id="code-counter" class="text-[11px] font-normal text-slate-400">0/6 alfanuméricos</span>
+            </label>
+            <input id="code" name="code" type="text" required placeholder="Ex.: AB-12-CD"
+              autocomplete="off"
+              class="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition uppercase" />
+            <p id="code-preview" class="mt-1 text-xs text-slate-500 hidden"></p>
+            <p id="code-error" class="mt-1 text-xs text-rose-600 hidden"></p>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-slate-700 flex items-center justify-between">
+              <span>Descrição <span class="text-rose-500">*</span></span>
+              <span id="description-counter" class="text-[11px] font-normal text-slate-400">0/255</span>
+            </label>
+            <input id="description" name="description" type="text" required maxlength="255" placeholder="Ex.: cupom de boas-vindas"
+              autocomplete="off"
+              class="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition" />
+            <p id="description-error" class="mt-1 text-xs text-rose-600 hidden"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm font-semibold text-slate-700">Desconto <span class="text-rose-500">*</span></label>
+              <input id="discountValue" name="discountValue" type="text" required inputmode="numeric" placeholder="R$ 0,00"
+                autocomplete="off"
+                class="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition font-medium tabular-nums" />
+              <p class="mt-1 text-[11px] text-slate-400">Mínimo R$ 0,50 — saldo absoluto</p>
+              <p id="discount-error" class="mt-1 text-xs text-rose-600 hidden"></p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700">Expira em <span class="text-rose-500">*</span></label>
+              <input id="expirationDate" name="expirationDate" type="date" required
+                class="mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition" />
+              <p class="mt-1 text-[11px] text-slate-400">Hoje ou futuro</p>
+              <p id="expiration-error" class="mt-1 text-xs text-rose-600 hidden"></p>
+            </div>
+          </div>
+
+          <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+            <input id="published" type="checkbox" class="mt-0.5 w-4 h-4 rounded text-brand-600 focus:ring-brand-500" />
+            <div>
+              <span class="block text-sm font-semibold text-slate-700">Publicar imediatamente</span>
+              <span class="block text-xs text-slate-500">Cria o cupom já no estado <code class="px-1 rounded bg-slate-100 text-slate-700">published=true</code>.</span>
+            </div>
+          </label>
+
+          <button id="submit-btn" type="submit"
+            class="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/30 transition transform active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Criar cupom
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="md:col-span-3">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Cupons</h2>
+          <p id="coupons-count" class="text-xs text-slate-500">Carregando…</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input id="search" type="text" placeholder="Buscar por código ou descrição…"
+              class="pl-9 pr-3 py-2 w-64 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
+          <button id="refresh-btn" title="Recarregar"
+            class="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="coupons-list" class="space-y-3"></div>
+
+      <template id="card-template">
+        <article class="group bg-white rounded-2xl shadow-sm hover:shadow-lg border border-slate-100 hover:border-brand-200 transition p-5 flex items-start gap-4 cursor-pointer">
+          <div data-field="initials" class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm tracking-wider shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span data-field="code" class="font-bold text-slate-900 tracking-wide"></span>
+              <span data-field="published-badge" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full"></span>
+              <span data-field="deleted-badge" class="hidden text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">Deletado</span>
+            </div>
+            <p data-field="description" class="text-sm text-slate-600 mt-1 truncate"></p>
+            <div class="flex items-center gap-4 mt-3 text-xs text-slate-500">
+              <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+                Expira em <span data-field="expirationDate" class="font-medium text-slate-700"></span>
+              </span>
+              <span class="flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span data-field="discountValue" class="font-medium text-slate-700"></span>
+              </span>
+              <span class="flex items-center gap-1">
+                #<span data-field="id" class="font-medium text-slate-700"></span>
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button data-action="view" class="opacity-0 group-hover:opacity-100 transition p-2 rounded-lg hover:bg-slate-100 text-slate-600" title="Ver detalhes">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button data-action="delete" class="opacity-0 group-hover:opacity-100 transition p-2 rounded-lg hover:bg-rose-50 text-rose-600 disabled:opacity-30 disabled:cursor-not-allowed" title="Deletar (soft delete)">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </button>
+          </div>
+        </article>
+      </template>
+
+      <div id="empty-state" class="hidden text-center py-16 bg-white/60 rounded-2xl border border-dashed border-slate-300">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6"/><path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"/><path d="M3 14h18"/></svg>
+        </div>
+        <p class="mt-4 font-semibold text-slate-700">Nenhum cupom encontrado</p>
+        <p class="text-sm text-slate-500">Crie seu primeiro cupom no formulário ao lado.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="confirm-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div id="confirm-modal" class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 scale-95 opacity-0 transition transform">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 17 .01 0"/><path d="M12 13V8"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div class="flex-1">
+          <h3 id="confirm-title" class="text-lg font-bold text-slate-900">Tem certeza?</h3>
+          <p id="confirm-message" class="text-sm text-slate-600 mt-1">Esta ação não pode ser desfeita.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button id="confirm-cancel" type="button"
+          class="px-4 py-2 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+          Cancelar
+        </button>
+        <button id="confirm-ok" type="button"
+          class="px-4 py-2 rounded-xl font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/30 transition">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="detail-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div id="detail-modal" class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden scale-95 opacity-0 transition transform">
+      <div class="px-6 py-5 bg-gradient-to-br from-brand-500 to-brand-700 text-white">
+        <div class="flex items-start gap-4">
+          <div id="detail-initials" class="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center font-bold text-lg tracking-wider shrink-0"></div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="detail-code" class="font-bold text-xl tracking-wider"></span>
+              <span id="detail-pub-badge" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-white/20"></span>
+              <span id="detail-del-badge" class="hidden text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-rose-500/30 text-white">Deletado</span>
+            </div>
+            <p id="detail-description" class="text-sm text-white/80 mt-1"></p>
+          </div>
+          <button id="detail-close" class="text-white/70 hover:text-white transition" aria-label="Fechar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Identificador</div>
+          <div class="mt-1 flex items-center gap-2">
+            <span id="detail-id" class="font-mono text-slate-800"></span>
+            <button id="detail-copy-id" class="text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 transition">copiar</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Código</div>
+          <div class="mt-1 flex items-center gap-2">
+            <span id="detail-code2" class="font-mono text-slate-800"></span>
+            <button id="detail-copy-code" class="text-xs px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 transition">copiar</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Desconto</div>
+          <div id="detail-discount" class="mt-1 font-semibold text-slate-800"></div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Expira em</div>
+          <div id="detail-expiration" class="mt-1 font-medium text-slate-800"></div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Criado em</div>
+          <div id="detail-created" class="mt-1 font-medium text-slate-800"></div>
+        </div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Deletado em</div>
+          <div id="detail-deleted" class="mt-1 font-medium text-slate-800">—</div>
+        </div>
+        <div class="col-span-2">
+          <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Status</div>
+          <div id="detail-status" class="mt-1"></div>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-slate-50 flex justify-end gap-2">
+        <button id="detail-cancel" class="px-4 py-2 rounded-xl font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition">Fechar</button>
+        <button id="detail-delete" class="px-4 py-2 rounded-xl font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/30 transition flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Deletar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-6 right-6 flex flex-col gap-3 z-50"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

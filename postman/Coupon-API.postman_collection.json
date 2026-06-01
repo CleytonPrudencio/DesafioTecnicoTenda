@@ -1,0 +1,384 @@
+{
+  "info": {
+    "name": "Coupon API - Tenda",
+    "description": "Collection de chamadas para a Coupon API.\n\nVariáveis:\n- baseUrl: URL base da API (default http://localhost:8080).\n- couponId: id do cupom criado (preenchida pelo teste de Create Success).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "couponId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "POST /coupon — Create (success, special chars sanitized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Location header present', () => pm.expect(pm.response.headers.get('Location')).to.be.a('string'));",
+              "const body = pm.response.json();",
+              "pm.test('code sanitized to 6 alphanumeric chars', () => pm.expect(body.code).to.match(/^[A-Za-z0-9]{6}$/));",
+              "pm.test('discountValue echoed', () => pm.expect(body.discountValue).to.equal(10.50));",
+              "pm.test('not deleted by default', () => pm.expect(body.deleted).to.equal(false));",
+              "pm.collectionVariables.set('couponId', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"AB-12-CD\",\n  \"description\": \"Cupom de boas-vindas\",\n  \"discountValue\": 10.50,\n  \"expirationDate\": \"2099-12-31\",\n  \"published\": false\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — Create published",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('published=true echoed', () => pm.expect(pm.response.json().published).to.equal(true));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"PUB123\",\n  \"description\": \"Cupom publicado na criação\",\n  \"discountValue\": 25,\n  \"expirationDate\": \"2099-12-31\",\n  \"published\": true\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — Create with minimum discount (0.5)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('discountValue=0.5', () => pm.expect(pm.response.json().discountValue).to.equal(0.5));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"MIN001\",\n  \"description\": \"Desconto mínimo\",\n  \"discountValue\": 0.5,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 invalid code length (< 6)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('message refers to code length', () => pm.expect(pm.response.json().message).to.match(/code must contain exactly 6/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"AB\",\n  \"description\": \"Código curto demais\",\n  \"discountValue\": 1,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 invalid code length (> 6 after sanitize)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ABCDEFG\",\n  \"description\": \"Código longo demais\",\n  \"discountValue\": 1,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 code raw > 60 chars",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('violation on code field', () => {",
+              "  const v = pm.response.json().violations;",
+              "  pm.expect(v && v.length, 'has violations').to.be.ok;",
+              "  pm.expect(v.some(x => x.field === 'code'), 'code field listed').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"description\": \"code longo demais\",\n  \"discountValue\": 1,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 description > 255 chars",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('violation on description', () => {",
+              "  const v = pm.response.json().violations;",
+              "  pm.expect(v && v.length, 'has violations').to.be.ok;",
+              "  pm.expect(v.some(x => x.field === 'description'), 'description field listed').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ABC123\",\n  \"description\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"discountValue\": 1,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 discount below 0.5",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('message refers to discount minimum', () => pm.expect(pm.response.json().message).to.match(/greater than or equal to 0\\.5/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ABC123\",\n  \"description\": \"Desconto abaixo do mínimo\",\n  \"discountValue\": 0.10,\n  \"expirationDate\": \"2099-12-31\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 expiration in the past",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('message refers to past date', () => pm.expect(pm.response.json().message).to.match(/cannot be in the past/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"ABC123\",\n  \"description\": \"Data passada\",\n  \"discountValue\": 5,\n  \"expirationDate\": \"2000-01-01\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 missing fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('4 field violations', () => pm.expect(pm.response.json().violations.length).to.equal(4));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "POST /coupon — 400 malformed body",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{not-json" },
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "GET /coupon — list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+              "pm.test('ordered desc by id', () => {",
+              "  const arr = pm.response.json();",
+              "  const ids = arr.map(c => c.id);",
+              "  const sorted = [...ids].sort((a,b)=>b-a);",
+              "  pm.expect(ids).to.eql(sorted);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/coupon", "host": ["{{baseUrl}}"], "path": ["coupon"] }
+      }
+    },
+    {
+      "name": "GET /coupon/{id} — get by id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('matches couponId', () => pm.expect(pm.response.json().id).to.equal(parseInt(pm.collectionVariables.get('couponId'),10)));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/coupon/{{couponId}}", "host": ["{{baseUrl}}"], "path": ["coupon", "{{couponId}}"] }
+      }
+    },
+    {
+      "name": "GET /coupon/{id} — 404 not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/coupon/9999999", "host": ["{{baseUrl}}"], "path": ["coupon", "9999999"] }
+      }
+    },
+    {
+      "name": "DELETE /coupon/{id} — soft delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 204', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/coupon/{{couponId}}", "host": ["{{baseUrl}}"], "path": ["coupon", "{{couponId}}"] }
+      }
+    },
+    {
+      "name": "DELETE /coupon/{id} — 409 already deleted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 409', () => pm.response.to.have.status(409));",
+              "pm.test('message refers to already deleted', () => pm.expect(pm.response.json().message).to.match(/already deleted/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/coupon/{{couponId}}", "host": ["{{baseUrl}}"], "path": ["coupon", "{{couponId}}"] }
+      }
+    },
+    {
+      "name": "DELETE /coupon/{id} — 404 not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/coupon/9999999", "host": ["{{baseUrl}}"], "path": ["coupon", "9999999"] }
+      }
+    },
+    {
+      "name": "DELETE /coupon/{id} — 400 invalid id",
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/coupon/not-a-number", "host": ["{{baseUrl}}"], "path": ["coupon", "not-a-number"] }
+      }
+    }
+  ]
+}
