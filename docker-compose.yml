@@ -5,16 +5,18 @@ services:
       dockerfile: Dockerfile
     image: tenda/coupon-api:latest
     container_name: coupon-api
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+      SPRING_PROFILES_ACTIVE: docker
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 30s
+      start_period: 40s
     networks:
       - coupon-net
 
@@ -24,14 +26,22 @@ services:
       dockerfile: Dockerfile
     image: tenda/coupon-web:latest
     container_name: coupon-web
+    restart: unless-stopped
     ports:
       - "3000:80"
     depends_on:
       coupon-api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     networks:
       - coupon-net
 
 networks:
   coupon-net:
     driver: bridge
+    name: coupon-net

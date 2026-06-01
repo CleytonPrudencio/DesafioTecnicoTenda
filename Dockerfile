@@ -1,22 +1,20 @@
 # syntax=docker/dockerfile:1.7
-# ---- build stage ----
-FROM eclipse-temurin:21-jdk-alpine AS build
+
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace
 
-COPY mvnw mvnw.cmd ./
-COPY .mvn .mvn
 COPY pom.xml ./
-RUN chmod +x mvnw && ./mvnw -B -q dependency:go-offline
+RUN mvn -B -q dependency:go-offline
 
 COPY src src
-RUN ./mvnw -B -q -DskipTests package && \
-    cp target/*.jar app.jar
+RUN mvn -B -q -DskipTests package && \
+    cp target/coupon-api-*.jar app.jar
 
-# ---- runtime stage ----
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S app -G app
+RUN apk add --no-cache wget && \
+    addgroup -S app && adduser -S app -G app
 USER app
 
 COPY --from=build /workspace/app.jar app.jar

@@ -1,9 +1,13 @@
 target/
 .git/
 .gitignore
+.gitattributes
 .idea/
 .vscode/
 *.iml
 HELP.md
 README.md
 .mvn/wrapper/maven-wrapper.jar
+postman/
+frontend/
+*.log
